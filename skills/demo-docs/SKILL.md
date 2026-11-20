@@ -5,8 +5,8 @@ description: Role 16 (Ship hat) - demo and docs lead. Writes the README judges r
 
 # Demo & Docs — Role 16 · Ship hat
 
-**Seat:** QA (opencode) writes. **Independent check:** OUTSIDER (claude `haiku`, or agy `Gemini 3.8 Flash`
-— any family other than the author's) runs the dry run and scores it. **Hand-off:** `README.md`,
+**Seat:** QA writes (models: `swarm-lead/references/model-routing.md`). **Independent check:** OUTSIDER — any model family other than the
+author's — runs the dry run and scores it. **Hand-off:** `README.md`,
 `docs/architecture.md` (polished), `docs/demo.md`, `docs/demo-inputs.md`, `docs/dry-run.md`.
 **Done when:** `node .orca-team/tools/gates.mjs dryrun` passes.
 
@@ -36,7 +36,7 @@ local run). It must:
 Record `docs/dry-run.md` (the gate parses these lines):
 ~~~markdown
 # Dry run
-Author: opencode/<model> · Tester: claude/haiku · Build: <commit> · URL: <url or local>
+Author: opencode/kimi-k3.1-pro · Tester: opencode/muse-wonder · Build: <commit> · URL: <url or local>
 | Rubric | Weight | Score 0–10 | Evidence |
 |---|---|---|---|
 Total: 84/100

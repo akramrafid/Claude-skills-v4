@@ -15,8 +15,8 @@ propose patches — don't rewrite the codebase. Read-only except your report fil
    (`node .orca-team/tools/gates.mjs contract e2e eval …`, or `gates.mjs all` at the final round) ·
    start the app (`npm run dev:api -- --port 8010`, web if relevant) and walk the golden path by hand
    (curl or browser via `webapp-testing`).
-3. Read the diff (`git diff <range> --stat`, then file by file). Start with schemas/contracts, then services,
-   adapters, routes, UI, tests.
+3. Read the diff (`git diff <range> --stat`, then file by file). Start with schemas/contracts and ports, then
+   each slice (service → deps → router → its UI → its tests), then shared/ and adapters.
 4. Check integration across slices: UI calls match the contract; CORE returns what UI expects; error shapes
    handled in UI; env vars documented.
 5. Write findings. Only report what you can point to (`file:line`) and explain. Mark uncertainty explicitly.
@@ -50,7 +50,9 @@ replay modes work.
 **Frontend** — types generated from contract · loading/empty/error states · streaming with Stop · sanitised
 Markdown · test IDs on golden path · no secrets/provider calls in browser.
 **Tests** — assert behaviour not just status · error paths covered · fakes instead of network · no sleeps.
-**Maintainability** — layering respected (routes thin, services framework-free) · no dead code/TODO in MUST
+**Maintainability** — slice rules kept (no feature imports another feature; router thin; service imports
+only ports/schemas/shared; SDK and ORM code only in `adapters/`; `main.py` and `schemas.py` touched only
+by LEAD) · no dead code/TODO in MUST
 features · names clear · duplicated logic from parallel merges removed.
 **Production-standards anti-patterns** — any one is at least HIGH.
 
@@ -63,8 +65,8 @@ features · names clear · duplicated logic from parallel merges removed.
 | Security | OWASP Top 10 2025, LLM Top 10 2026 | REVIEWER-SEC finds nothing above LOW |
 | AI quality | eval held-out vs baseline | above threshold, judged cross-family, no regression |
 | Performance | PRD NFRs | k6 thresholds and TTFT target met |
-| Maintainability | layering, typing, lint | small modules, strict types, no dead code |
-| Tests | test plan | behaviour asserted, error paths, coverage ≥ 80 % on services |
+| Maintainability | slice rules, typing, lint | small modules, strict types, no dead code |
+| Tests | test plan | behaviour asserted, error paths, coverage ≥ 80 % on feature services + shared |
 | Operability | 12-Factor, golden signals | one-command run, traces, health/readiness, docs true |
 | UX & a11y | WCAG 2.2 AA, docs/ux | four states, axe clean, hallway test passed |
 Any dimension ≤ 2 on the golden path is at least a HIGH finding.

@@ -1,9 +1,21 @@
 
 # FastAPI patterns (reference for backend-engineering)
 
-Layering: `routes` (HTTP only: parse, call service, map errors) → `services` (business logic, no FastAPI
-imports) → `adapters` (LLM, vector store, DB, storage, external APIs). Services receive adapters through
-constructors; routes get services through `Depends` so tests can swap them.
+Architecture: modular monolith cut into **vertical slices** with **ports & adapters** (ADR-0001,
+`solution-architecture/references/blueprint.md` §3).
+```
+app/ports/llm.py              Protocol LLM            (LEAD)   ← what services depend on
+app/adapters/llm.py           class LLMClient         (CORE)   ← real SDK code lives only here
+app/adapters/fake_llm.py      class FakeLLM           (CORE)   ← tests, LLM_MOCK, test mode
+app/features/ask/schemas.py   AskRequest, AskEvent    (LEAD)   ← contract
+app/features/ask/service.py   AskService              (core-ask) imports ports + schemas + shared only
+app/features/ask/deps.py      get_ask_service         (core-ask) Depends wiring
+app/features/ask/router.py    POST /api/v1/ask/stream (core-ask) HTTP only
+```
+`router` (parse, call service, map errors) → `service` (business logic, no FastAPI/SDK/ORM imports) →
+`ports` (Protocols) ← implemented by `adapters`. Lifespan builds adapters once; `deps.py` hands the service
+its ports through `Depends`, so tests swap fakes with `dependency_overrides`. Features never import each
+other; shared logic goes to `app/shared/`.
 
 ## 1. Setup
 ```
@@ -188,7 +200,7 @@ async def lifespan(app: FastAPI):
     s.require_runtime()
     app.state.http = httpx.AsyncClient(timeout=httpx.Timeout(s.http_timeout_s, connect=3.0))
     app.state.readiness = {}            # name -> async callable; adapters register themselves here
-    # build adapters + services once, e.g. app.state.chat_service = ChatService(llm=..., store=...)
+    # build adapters once: app.state.llm = FakeLLM() if s.llm_mock else LLMClient(...)  (ai-engineering/references/llm-client.md)
     yield
     await app.state.http.aclose()
 
@@ -222,23 +234,76 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
     app.include_router(health)
-    # app.include_router(chat_router, prefix="/api/v1")
+    for r in FEATURE_ROUTERS:            # LEAD keeps this list: from app.features.ask.router import router as ask
+        app.include_router(r, prefix="/api/v1")
     return app
 
 app = create_app()
 ```
 
-## 6. Routes stay thin; services are injectable
+## 6. One slice: port → service → deps → router
 ```python
-def get_chat_service(request: Request) -> ChatService:
-    return request.app.state.chat_service
+# app/ports/llm.py  (LEAD) — the only thing services know about the model
+from typing import AsyncIterator, Protocol, TypeVar
+from pydantic import BaseModel
 
-@router.post("/chat/stream")
-async def chat_stream(body: ChatRequest, svc: ChatService = Depends(get_chat_service)):
+T = TypeVar("T", bound=BaseModel)
+
+class LLM(Protocol):          # LLMClient (adapters/llm.py) and FakeLLM (adapters/fake_llm.py) both satisfy it
+    async def complete(self, messages: list[dict], *, max_tokens: int = 1024,
+                       temperature: float | None = 0.2, model: str | None = None) -> "LLMResult": ...
+    async def complete_json(self, messages: list[dict], schema: type[T], **kw) -> T: ...
+    def stream(self, messages: list[dict], *, max_tokens: int = 1024) -> AsyncIterator[str]: ...
+```
+```python
+# app/features/ask/service.py  (core-ask) — no FastAPI, no SDK, no ORM imports
+from app.ports.llm import LLM
+from app.ports.vector_store import VectorStore
+from app.features.ask.prompts import build_messages   # versioned prompt files live in prompts/
+from app.features.ask.schemas import AskRequest, AskEvent
+from app.shared.retrieval import retrieve
+
+class AskService:
+    def __init__(self, llm: LLM, store: VectorStore, *, max_tokens: int):
+        self.llm, self.store, self.max_tokens = llm, store, max_tokens
+
+    async def stream_answer(self, body: AskRequest):
+        chunks = await retrieve(self.store, body.question, k=body.top_k)
+        if not chunks:
+            yield AskEvent(type="refusal", text="I don't have a source for that.")
+            return
+        async for token in self.llm.stream(build_messages(body, chunks), max_tokens=self.max_tokens):
+            yield AskEvent(type="token", text=token)
+        yield AskEvent(type="done", citations=[c.ref for c in chunks])
+```
+```python
+# app/features/ask/deps.py  (core-ask)
+from fastapi import Request
+from app.core.config import get_settings
+from app.features.ask.service import AskService
+
+def get_ask_service(request: Request) -> AskService:
+    s = get_settings()
+    return AskService(request.app.state.llm, request.app.state.store, max_tokens=s.max_output_tokens)
+```
+```python
+# app/features/ask/router.py  (core-ask) — HTTP only
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from app.core.errors import problem_responses
+from app.core.logging import request_id_var, log
+from app.features.ask.deps import get_ask_service
+from app.features.ask.schemas import AskRequest
+from app.features.ask.service import AskService
+
+router = APIRouter(tags=["ask"])
+
+@router.post("/ask/stream", responses=problem_responses(422, 429, 502, 504))
+async def ask_stream(body: AskRequest, svc: AskService = Depends(get_ask_service)):
     rid = request_id_var.get()                      # capture now; body streams after middleware returns
     async def events():
         try:
-            async for ev in svc.stream_answer(body):          # yields typed events: token, citation, done
+            async for ev in svc.stream_answer(body):          # typed events: token, refusal, done
                 yield f"event: {ev.type}\ndata: {ev.model_dump_json()}\n\n"
         except Exception:
             log.exception("stream_failed")
@@ -246,7 +311,9 @@ async def chat_stream(body: ChatRequest, svc: ChatService = Depends(get_chat_ser
     return StreamingResponse(events(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 ```
-Tests swap services: `app.dependency_overrides[get_chat_service] = lambda: FakeChatService()`.
+Tests (in `tests/features/ask/`) build the service directly with fakes —
+`AskService(FakeLLM(["Hi"]), InMemoryStore(fixtures), max_tokens=64)` (timeouts live in the adapter) — or swap it in the app:
+`app.dependency_overrides[get_ask_service] = lambda: AskService(FakeLLM(...), InMemoryStore(...), ...)`.
 
 ## 7. Data access (async SQLAlchemy 2)
 Engine settings for Neon + Vercel (pooled URL, NullPool, timeouts, asyncpg URL conversion) are in
@@ -280,4 +347,5 @@ Repositories take an `AsyncSession`; multi-step writes in `async with session.be
 ## 9. Done checklist (in addition to production-standards)
 `/healthz` 200 · `/readyz` names each dependency · every route returns contract-valid bodies and
 problem+json errors · no blocking I/O in async routes · services unit-tested with fake adapters ·
+no feature imports another feature · SDK/ORM imports only in `adapters/` ·
 `npm run contracts` re-run if you touched schemas (LEAD only) · `ruff check` + `ruff format` clean.

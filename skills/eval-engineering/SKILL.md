@@ -5,7 +5,7 @@ description: Role 11 (Prove hat) - eval engineer. Builds the golden dataset (30 
 
 # Eval Engineering — Role 11 · Prove hat
 
-**Seat:** QA (opencode). **Independent check:** the judge model is from a different family than the
+**Seat:** QA (models: `swarm-lead/references/model-routing.md`). **Independent check:** the judge model is from a different family than the
 generator; the held-out split is locked by hash so nobody tunes on it. **Hand-off:**
 `apps/api/evals/datasets/*.jsonl`, `evals/rubrics/*.md`, `evals/config.json`, `evals/run.py`,
 `evals/results/latest-heldout.json`, `evals/history.jsonl`. **Done when:**

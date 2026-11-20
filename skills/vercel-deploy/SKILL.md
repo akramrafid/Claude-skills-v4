@@ -5,7 +5,7 @@ description: Role 14 (Ship hat) - platform and deployment on Vercel, no Docker o
 
 # Vercel Deploy — Role 14 · Ship hat
 
-**Seat:** QA (opencode) prepares; LEAD runs the deploy commands after the human says yes.
+**Seat:** QA prepares (models: `swarm-lead/references/model-routing.md`); LEAD runs the deploy commands after the human says yes.
 **Independent check:** OUTSIDER opens the live URL during the dry run (role 16). **Hand-off:**
 `docs/deploy.md`, `.orca-team/deploy.json` (`{"api_url": "...", "web_url": "..."}`), live URLs in README.
 **Done when:** `gates.mjs fresh-clone` and `gates.mjs deploy` pass.

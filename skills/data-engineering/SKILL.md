@@ -5,7 +5,7 @@ description: Role 6 (Design hat) - data engineer for AI features. Builds the ide
 
 # Data Engineering — Role 6 · Design hat
 
-**Seat:** DATA (opencode). **Independent check:** REVIEWER-CODE (Claude) reviews the pipeline; the metric
+**Seat:** DATA (models: `swarm-lead/references/model-routing.md`). **Independent check:** REVIEWER-CODE (Claude) reviews the pipeline; the metric
 is computed by code, not by opinion. **Hand-off:** `apps/api/app/ingest/`, `docs/data-pipeline.md`,
 `apps/api/evals/datasets/retrieval.jsonl`, `apps/api/evals/retrieval.py`, `evals/results/retrieval.json`.
 **Done when:** `node .orca-team/tools/gates.mjs retrieval` passes (default Recall@5 ≥ 0.80 on ≥ 20 queries;

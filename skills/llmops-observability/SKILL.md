@@ -5,7 +5,7 @@ description: Role 15 (Ship hat) - LLMOps and SRE. Makes every LLM call traced wi
 
 # LLMOps / SRE — Role 15 · Ship hat
 
-**Seat:** CORE (claude `sonnet`). **Independent check:** the tracing tests count SDK invocations against
+**Seat:** CORE (models: `swarm-lead/references/model-routing.md`). **Independent check:** the tracing tests count SDK invocations against
 trace records (machine-checked); REVIEWER-CODE reviews. **Hand-off:** `apps/api/app/observability/`,
 `llm_calls` migration (with DATA), `GET /api/v1/ops/llm-metrics`, web page `/ops`, `docs/llmops.md`.
 **Done when:** `node .orca-team/tools/gates.mjs traces` passes.

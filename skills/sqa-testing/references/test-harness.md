@@ -126,4 +126,4 @@ See SKILL.md (k6 with thresholds, `npm run load`).
 
 ## 8. Done checklist
 Harness + fake LLM in place · every endpoint: happy + validation + dependency-failure tests · contract drift
-test · smoke covers every golden-path step · coverage ≥ 80 % on `app/services` · `npm run ci` green.
+test · smoke covers every golden-path step · coverage ≥ 80 % on `app/features/*/service.py` + `app/shared/` · `npm run ci` green.

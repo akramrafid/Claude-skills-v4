@@ -18,7 +18,7 @@ slice** before widening · **builders and checkers on different model families**
 |---|---|---|
 | 0 Bootstrap | 2 min | Orca reachable, `LEAD_BRANCH`, doctor read |
 | 1 Frame | ≤ 20 min | `gates.mjs prd` (UX + credentials run in parallel) |
-| 2 Design + contracts lock | ≤ 40 min | `gates.mjs prd adr contracts resilience` green, skeleton runs |
+| 2 Design + contracts lock | ≤ 40 min | `gates.mjs prd adr contracts resilience slices` green, skeleton runs |
 | 3 Build: thin slice (wave 1) | ~20 % of T | golden path end-to-end; `ci`, `contract`, `e2e`, `baseline`, `migrations` green |
 | 4 Prove + widen (waves 2–3) | until freeze | review rounds, `eval`, `retrieval`, `redteam`, `load` green |
 | 5 Ship (freeze) | last max(2 h, 15 % of T) | `traces`, `fresh-clone`, `deploy`, `dryrun`, then `promote` |
@@ -36,21 +36,24 @@ slice** before widening · **builders and checkers on different model families**
    rubric lines, Given/When/Then ACs (happy + failure), NFRs with numbers, out of scope, demo script v0.
    Commit as soon as the golden path exists so others can start.
 2. In parallel: **credentials** (`credentials-gate`, ask once, don't wait) · **UI seat** → `ux-flow-design`
-   (flow, wireframes with four states, test IDs) · **CRITIC** → PRD critique (read-only).
-3. Exit: `node .orca-team/tools/gates.mjs prd` passes; apply CRITIC bullets; set PRD `Status: locked`.
+   (flow, wireframes with four states, test IDs) · **DESIGN seat** → PRD critique (read-only, another family).
+3. Exit: `node .orca-team/tools/gates.mjs prd` passes; apply the critique bullets; set PRD `Status: locked`.
 
 ## Phase 2 — Design and contracts lock (roles 3–7)
 1. **You (role 3, `solution-architecture`)**: archetype, C4 views, deployment view, ADRs with rejected options.
-   Read `solution-architecture/references/blueprint.md` and build the **walking skeleton** yourself: layout,
-   root scripts, settings with `APP_ENV`, logging, problem+json, `/healthz` `/readyz`, every contract route as
-   a stub returning schema-valid data with documented error responses → `npm run contracts` → commit.
-2. **You (role 4, `system-design`)**: sequence diagrams, resilience register, latency budget, rate limits.
+   Architecture style is fixed: **modular monolith, one vertical slice per PRD capability, ports & adapters
+   around outside services** (blueprint §3). Read `solution-architecture/references/blueprint.md` and build the
+   **walking skeleton** yourself: `core/`, `ports/`, one `features/<name>/` folder per MUST capability with its
+   `schemas.py` and a stub router returning schema-valid data with documented error responses, root scripts,
+   settings with `APP_ENV`, `/healthz` `/readyz` → `npm run contracts` → commit.
+2. **DESIGN seat (role 4, `system-design`)**: dispatch it as soon as the architecture views are committed —
+   sequence diagrams, resilience register, latency budget, rate limits. You review it (other family).
 3. Dispatch in parallel as soon as the skeleton is committed: **DATA** → `database-engineering` (schema, first
    migration, `db_check.py`) · **QA** → `eval-engineering` (≥ 30 cases per capability with splits, rubric,
    runner) · **CORE** → `ai-engineering` (model bake-off, prompt v1, structured schemas) · **DATA** (second
    task) → `data-engineering` (ingest CLI, golden retrieval queries).
 4. Install optional skills the stack needs: `node .orca-team/tools/install-skills.mjs --only <keys>` → commit.
-5. **Contracts lock** exit: `node .orca-team/tools/gates.mjs prd adr contracts resilience` all green (contracts
+5. **Contracts lock** exit: `node .orca-team/tools/gates.mjs prd adr contracts resilience slices` all green (contracts
    = OpenAPI exported, first migration, eval set ≥ 30 with splits). Broadcast "contracts locked" to `@all`.
 
 ## Phase 3 — Build the thin hardened slice (roles 8–10)
@@ -61,18 +64,20 @@ Typical wave 1: `core-<slice>` (backend-engineering, ai-engineering, llmops-obse
 (frontend-engineering) · `data-<slice>` (database-engineering, data-engineering) · `qa-harness`
 (sqa-testing, eval-engineering). Waves 2–3: remaining MUSTs, depth, WOW, polish — plan them while wave 1 runs.
 
-## Routing (seat → agent/model; fallbacks in AGENTS.md §2)
-| Role(s) | Seat | `--agent` / model | Skills on the spec's SKILLS line |
-|---|---|---|---|
-| 1 PRD, 3 architecture, 4 system design, 8 integration | LEAD (you) | claude `opus` high | product-requirements, solution-architecture, system-design, tech-lead-integration |
-| 2 UX, 10 frontend | UI | antigravity `Gemini 4 Hydrogen` xhigh | ux-flow-design / frontend-engineering + frontend-design, vercel-react-best-practices, web-design-guidelines |
-| 5 AI engineer, 9 backend, 15 LLMOps | CORE | claude `sonnet` high | ai-engineering / backend-engineering / llmops-observability |
-| 6 data, 7 database | DATA | opencode (default model) | data-engineering / database-engineering + supabase-postgres-best-practices |
-| 11 evals, 12 SQA, 14 deploy prep, 16 demo & docs | QA | opencode | eval-engineering / sqa-testing / vercel-deploy / demo-docs |
-| 13 red team + security review | REVIEWER-SEC | antigravity `Gemini 4 Argon` | ai-red-team, security-review + Trail of Bits skills |
-| code review (all code) | REVIEWER-CODE | claude `best` xhigh | code-review, find-bugs, web-design-guidelines, webapp-testing |
-| PRD / architecture critique | CRITIC | antigravity `Gemini 3.1 Pro (High)` | read-only, short report |
-| hallway test, dry run | OUTSIDER | claude `haiku` (fallback agy `Gemini 3.8 Flash`) | webapp-testing |
+## Routing (seat → model in `references/model-routing.md`; that file also has the fallbacks)
+| Role(s) | Seat | Skills on the spec's SKILLS line |
+|---|---|---|
+| 1 PRD, 3 architecture, 8 integration | LEAD (you) | product-requirements, solution-architecture, tech-lead-integration |
+| 4 system design · PRD and architecture critique | DESIGN | system-design (critique tasks are read-only, short reports) |
+| 2 UX, 10 frontend (UI-2 for a second feature in parallel) | UI / UI-2 | ux-flow-design / frontend-engineering + frontend-design, vercel-react-best-practices, web-design-guidelines |
+| 5 AI engineer, 9 backend, 15 LLMOps | CORE | ai-engineering / backend-engineering / llmops-observability |
+| 6 data, 7 database | DATA | data-engineering / database-engineering + supabase-postgres-best-practices |
+| 11 evals, 12 SQA, 14 deploy prep, 16 demo & docs | QA | eval-engineering / sqa-testing / vercel-deploy / demo-docs |
+| 13 red team + security review | REVIEWER-SEC | ai-red-team, security-review + Trail of Bits skills |
+| code review (all code) | REVIEWER-CODE | code-review, find-bugs, web-design-guidelines, webapp-testing |
+| hallway test, dry run | OUTSIDER | webapp-testing |
+Assign one worker per **feature slice** (e.g. `core-ask`, `ui-ask`, `core-triage`): slices have disjoint paths,
+so two CORE or UI workers can run at once. Out of quota → the seat's fallback in model-routing (Gemini 4 Neon first).
 Every builder spec also lists `production-standards` and `verification-before-completion`; fix tasks add
 `production-hardening` and `receiving-code-review`. RACE (critical + uncertain task): same spec to 2–3 agents,
 REVIEWER-CODE picks the winner by tests and the scorecard.
@@ -97,7 +102,7 @@ Then end your turn (Orca wakes you) or make one blocking
 | question | answer next turn; contract change → edit schemas, `npm run contracts`, commit, `send --to @all` |
 | credential request | CREDENTIALS.md, ask the human (credentials-gate format), gate dependent tasks |
 | blocked > 15 min / silent 10 min | `worker-read`, nudge with `send`, else stop + re-route |
-| `LIMIT HIT` / quota errors | AGENTS.md §4 ladder |
+| `LIMIT HIT` / quota errors | AGENTS.md §4 + `references/model-routing.md` (Neon first) |
 | human message | highest priority |
 
 ## Phase 4 — Prove (review rounds, max 2 full rounds)

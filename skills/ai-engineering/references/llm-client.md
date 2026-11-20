@@ -7,6 +7,8 @@ If the product calls the Claude API, also load the optional `claude-api` skill (
 tool use, prompt caching) — LEAD installs it with `--only claude-api`.
 
 ## 1. One adapter, config-driven (`app/adapters/llm.py`)
+`LLMClient` implements the `LLM` port in `app/ports/llm.py` (LEAD); feature services type against the port,
+never against this class, so `FakeLLM` drops in for tests.
 ```python
 import json, re, time
 from dataclasses import dataclass
@@ -97,7 +99,7 @@ def _strip_fences(text: str) -> str:
   `sha256(model + prompt_version + canonical_json(messages))` under `apps/api/demo_replay/`. Record the golden
   path once with real keys; replay on stage if the network or provider fails.
 
-## 3. Prompts are code (`app/prompts/<name>.v<N>.md`)
+## 3. Prompts are code (`app/features/<feature>/prompts/<name>.v<N>.md`)
 ```python
 from pathlib import Path
 from string import Template

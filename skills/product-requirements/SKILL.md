@@ -5,9 +5,9 @@ description: Role 1 (Frame hat) - product owner and requirements analyst. Turns 
 
 # Product Requirements — Role 1 · Frame hat
 
-**Seat:** LEAD (claude `opus`). **Independent check:** CRITIC (agy `Gemini 3.1 Pro`) critiques the PRD.
-**Hand-off:** `docs/PRD.md`. **Done when:** `node .orca-team/tools/gates.mjs prd` passes and the CRITIC's
-must-fix points are applied.
+**Seat:** LEAD (models: `swarm-lead/references/model-routing.md`). **Independent check:** the DESIGN seat (another family) critiques the PRD.
+**Hand-off:** `docs/PRD.md`. **Done when:** `node .orca-team/tools/gates.mjs prd` passes and the DESIGN
+seat's must-fix points are applied.
 
 Principle: **start from the rubric and the demo.** Judges score the rubric by watching a 3-minute demo. Every
 MUST feature exists because a rubric line rewards it, and every MUST appears in the demo. Anything else waits.
@@ -84,8 +84,8 @@ _Owner: LEAD · Updated: <time> · Status: draft | locked_
 - Scope change → update PRD first (LEAD only), re-run the gate, broadcast with `orca orchestration send --to @all`.
 - Set `Status: locked` when Design starts; after that only LEAD edits, with a one-line note in STATUS.md.
 
-## CRITIC review (cross-family)
-Dispatch a short read-only task to CRITIC: "Read TASK.md and docs/PRD.md. List: rubric points no MUST
+## DESIGN seat critique (cross-family)
+Dispatch a short read-only task to the DESIGN seat (Gemini 4 Neon, max): "Read TASK.md and docs/PRD.md. List: rubric points no MUST
 covers · ACs that are not testable · MUSTs that are too big for the time left · risky assumptions. Write
 `.orca-team/reviews/prd-critique.md`, max 15 bullets." LEAD applies or rejects each bullet (one line why).
 

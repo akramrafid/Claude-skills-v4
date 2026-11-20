@@ -1,11 +1,11 @@
 ---
 name: tech-lead-integration
-description: Role 8 (Build hat) - tech lead and integrator. Defines branch rules (worker branches into LEAD_BRANCH, LEAD_BRANCH into main only after full gates and human approval), merge order, the merge gate (no-commit merge, npm run ci, commit or abort), non-author review for every merge, cross-family review rounds, conflict resolution toward the contract, commit conventions and the promotion checklist. Use whenever a worker branch is ready to merge, when the integration branch turns red, and before anything reaches main. Done check - node .orca-team/tools/gates.mjs merge BRANCH for each merge and gates.mjs promote before main.
+description: Role 8 (Build hat) - tech lead and integrator. Defines branch rules (worker branches into LEAD_BRANCH, LEAD_BRANCH into main only after full gates and human approval), merge order, the merge gate (no-commit merge, vertical-slice boundary check, npm run ci, commit or abort), non-author review for every merge, cross-family review rounds, conflict resolution toward the contract, commit conventions and the promotion checklist. Use whenever a worker branch is ready to merge, when the integration branch turns red, and before anything reaches main. Done check - node .orca-team/tools/gates.mjs merge BRANCH for each merge and gates.mjs promote before main.
 ---
 
 # Tech Lead / Integrator — Role 8 · Build hat
 
-**Seat:** LEAD (claude `opus`). **Independent check:** every merge is reviewed by a non-author; every
+**Seat:** LEAD (models: `swarm-lead/references/model-routing.md`). **Independent check:** every merge is reviewed by a non-author; every
 review round uses two model families; `main` needs the human's approval. **Hand-off:** a green
 `LEAD_BRANCH`, `.orca-team/STATUS.md` "Merged", review files in `.orca-team/reviews/`.
 
@@ -29,16 +29,17 @@ changed behaviour, keep the one that satisfies the PRD AC and dispatch a fix tas
    paths · AC covered by tests named after AC ids · no secrets · no contract edits · new env vars in
    `.env.example`. Write 3–8 lines to `.orca-team/reviews/merge-<branch>.md` ending `Verdict: MERGE | FIX`.
 3. `node .orca-team/tools/gates.mjs merge <branch>` → it runs `git merge --no-ff --no-commit <branch>`,
+   then the slice check (no feature imports another feature; services free of FastAPI/SDK/ORM imports),
    then `npm run ci`; green → commits `merge: <branch>`; red → `git merge --abort` and prints the failure.
 4. Red → load `systematic-debugging`, find the root cause, fix it yourself if ≤ 5 minutes, else dispatch a
    fix task with the root cause to the owner. Never leave `LEAD_BRANCH` red.
 5. STATUS.md → Merged, then dispatch tasks this merge unblocked.
 
 ## Review rounds (cross-family, after wave 1, after big fix batches, before freeze)
-Run in parallel, read-only (`--worktree current`): REVIEWER-CODE (claude `best`, skill `code-review`) and
-REVIEWER-SEC (agy `Gemini 4 Argon`, skills `security-review` + `ai-red-team`). Gemini-built UI gets its code
-review from Claude; Claude-built backend gets its security review from Gemini; OpenCode-built work gets
-both. Fixes go back to the **owner seat** with `production-hardening` + `receiving-code-review`; reviewers
+Run in parallel, read-only (`--worktree current`): REVIEWER-CODE (Opus, skill `code-review`) and
+REVIEWER-SEC (Muse Wonder, skills `security-review` + `ai-red-team`). Gemini-built UI gets its code review
+from Claude; Claude-built backend gets its security review from Meta's model; Kimi-built data and QA work
+gets both. Models per `swarm-lead/references/model-routing.md`. Fixes go back to the **owner seat** with `production-hardening` + `receiving-code-review`; reviewers
 re-check only changed files. Max 2 full rounds.
 
 ## Promotion to main

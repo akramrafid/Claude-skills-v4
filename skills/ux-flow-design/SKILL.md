@@ -5,8 +5,8 @@ description: Role 2 (Frame hat) - UX designer. Turns the PRD golden path into a 
 
 # UX Flow Design — Role 2 · Frame hat
 
-**Seat:** UI (agy `Gemini 4 Hydrogen`, effort xhigh). **Independent check:** OUTSIDER (claude `haiku`)
-runs the hallway test. **Hand-off:** `docs/ux/flow.md`, `docs/ux/wireframes.md`, `docs/ux/hallway-test.md`.
+**Seat:** UI (models: `swarm-lead/references/model-routing.md`). **Independent check:** OUTSIDER (a non-Gemini model) runs the hallway
+test. **Hand-off:** `docs/ux/flow.md`, `docs/ux/wireframes.md`, `docs/ux/hallway-test.md`.
 **Done when:** `node .orca-team/tools/gates.mjs ux` passes.
 
 The judges are outsiders who see the product for 3 minutes. If an outsider model can't finish the core flow
@@ -52,13 +52,13 @@ A11y: input labelled; answer region aria-live=polite; focus moves to answer on c
 ~~~
 
 ## Hallway test (independent, cross-family)
-Ask LEAD to dispatch OUTSIDER (read-only, `--model haiku`; author is Gemini, so the tester must not be).
+Ask LEAD to dispatch OUTSIDER (read-only; the author is Gemini, so the tester must not be — see model-routing).
 Give the outsider **only** the persona, one task sentence ("You were charged twice — find out if you get a
 refund"), and `docs/ux/wireframes.md`. It narrates each step: where it looks, what it clicks or types,
 where it hesitated, and whether it reached the goal. Record in `docs/ux/hallway-test.md`:
 ~~~markdown
 # Hallway test
-Author: antigravity/Gemini 4 Hydrogen · Tester: claude/haiku · Material: wireframes | running app
+Author: antigravity/Gemini 4 Neon · Tester: opencode/muse-wonder · Material: wireframes | running app
 Task: <sentence>
 | Step | Expected | What the tester did | Hesitation? |
 |---|---|---|---|

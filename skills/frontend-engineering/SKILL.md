@@ -5,9 +5,10 @@ description: Role 10 (Build hat) - frontend engineer. Builds the Next.js App Rou
 
 # Frontend Engineering — Role 10 · Build hat
 
-**Seat:** UI (agy `Gemini 4 Hydrogen`, effort xhigh). **Independent check:** REVIEWER-CODE (Claude,
-cross-family) reviews every round; OUTSIDER re-runs the hallway test on the running app.
-**Hand-off:** `apps/web/**` including `apps/web/e2e/`. **Done when:** `node .orca-team/tools/gates.mjs e2e`
+**Seat:** UI (models: `swarm-lead/references/model-routing.md`); UI-2 can take a second feature in parallel. **Independent check:**
+REVIEWER-CODE (Claude, cross-family) reviews every round; OUTSIDER re-runs the hallway test on the running app.
+**Hand-off:** your slice — `apps/web/src/features/<name>/`, its routes in `src/app/`, and
+`apps/web/e2e/<name>*.spec.ts` (layout: `references/nextjs-patterns.md` §2). **Done when:** `node .orca-team/tools/gates.mjs e2e`
 (runs `npm run e2e`) passes, plus lint, typecheck and build.
 
 Read `references/nextjs-patterns.md` (scaffold, typed client, SSE, safe Markdown, four states, headers).

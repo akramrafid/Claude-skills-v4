@@ -5,8 +5,8 @@ description: Role 12 (Prove hat) - software quality assurance engineer. Writes d
 
 # SQA — Role 12 · Prove hat
 
-**Seat:** QA (opencode). **Independent check:** QA tests code written by Claude (CORE) and Gemini (UI) — a
-different family from both; REVIEWER-CODE checks test quality. **Hand-off:** `docs/test-plan.md`,
+**Seat:** QA (models: `swarm-lead/references/model-routing.md`). **Independent check:** QA tests code written by Claude (CORE) and Gemini (UI)
+— a different family from both; REVIEWER-CODE checks test quality. **Hand-off:** `docs/test-plan.md`,
 `apps/api/tests/**`, `scripts/smoke.mjs`, `tests/load/smoke.js`. **Done when:** `gates.mjs ci` and
 `gates.mjs load` pass.
 
@@ -39,7 +39,8 @@ raises → 502/503/504, no stack trace) · authorization (user A can't read B) �
 limit (429 when enabled). Test names carry AC ids where they prove an AC.
 
 ## 3. Coverage and quality of tests
-`pytest-cov` on `app/`: ≥ 80 % lines on `app/services/` (business logic); report in CI output. Tests assert
+`pytest-cov` on `app/`: ≥ 80 % lines on `app/features/*/service.py` and `app/shared/` (business logic);
+report in CI output. Tests assert
 behaviour, not just status codes. No network in unit tests, no sleeps, no real secrets in fixtures.
 Flaky test → quarantine with `@pytest.mark.skip(reason="flaky: <issue>")` + fix task; never retry-until-green.
 

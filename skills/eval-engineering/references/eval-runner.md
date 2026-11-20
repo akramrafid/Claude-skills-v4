@@ -247,7 +247,7 @@ if __name__ == "__main__":
 ```python
 """Recall@k and MRR on datasets/retrieval.jsonl. Labels are 'source_id' or 'source_id#section'."""
 import asyncio, json, pathlib, subprocess
-from app.services.retrieval import build_retriever      # product factory; hits expose source_id + section
+from app.shared.retrieval import build_retriever              # product factory; hits expose source_id + section
 
 ROOT = pathlib.Path(__file__).parent
 K = 5

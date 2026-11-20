@@ -5,8 +5,9 @@ description: Role 4 (Design hat) - system designer. Writes docs/system-design.md
 
 # System Design — Role 4 · Design hat
 
-**Seat:** LEAD (claude `opus`); CORE fills the register rows for adapters it writes. **Independent check:**
-CRITIC (agy `Gemini 3.1 Pro`) plus the gate's code scan. **Hand-off:** `docs/system-design.md` and
+**Seat:** DESIGN (models: `swarm-lead/references/model-routing.md`), dispatched by LEAD once the architecture views exist; CORE
+fills the register rows for adapters it writes. **Independent check:** LEAD (another family) reviews it,
+plus the gate's code scan. **Hand-off:** `docs/system-design.md` and
 fault-injection tests (`pytest -m faults`). **Done when:** `node .orca-team/tools/gates.mjs resilience` passes.
 
 ## 1. Sequence diagrams (Mermaid `sequenceDiagram`)

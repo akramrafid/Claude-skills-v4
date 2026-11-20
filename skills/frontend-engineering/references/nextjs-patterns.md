@@ -27,15 +27,21 @@ npm i -D openapi-typescript
 `"typecheck": "tsc --noEmit"`. Set `"strict": true` in tsconfig (default). Run `npm run api:types` after every
 contract change (LEAD broadcasts them).
 
-## 2. Structure
+## 2. Structure (vertical slices, mirrors `apps/api/app/features/`)
 ```
-src/app/                 routes (server components by default; "use client" only where interactive)
-src/components/ui/       shadcn primitives (generated)
-src/components/<feature>/ feature components
-src/lib/env.ts           validated public env
-src/lib/api/             client.ts, schema.d.ts (generated), errors.ts, sse.ts
-src/hooks/               TanStack Query hooks per resource
+src/app/                    thin routes: compose features (server components by default; "use client" only where interactive)
+src/app/layout.tsx          LEAD
+src/features/<name>/        one folder per capability, owned by worker ui-<name>:
+  components/               feature UI (AskBox.tsx, AnswerStream.tsx, Citations.tsx)
+  hooks.ts                  TanStack Query hooks / SSE hook for this feature
+  api.ts                    typed calls for this feature's endpoints only (uses src/lib/api/client.ts)
+src/components/ui/          shadcn primitives (generated; first UI worker owns, others ask LEAD)
+src/lib/env.ts              validated public env
+src/lib/api/                client.ts, schema.d.ts (generated), errors.ts, sse.ts — shared
+e2e/<name>.spec.ts          the feature's Playwright tests
 ```
+Rules: a feature never imports from another feature folder; shared pieces go to `components/ui/` or `lib/`.
+Pages in `src/app/` import from `src/features/*` and stay thin.
 
 ## 3. Env, client, errors
 ```ts

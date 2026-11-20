@@ -5,9 +5,9 @@ description: Role 5 (Design hat) - AI engineer. Chooses models with a small meas
 
 # AI Engineering — Role 5 · Design hat
 
-**Seat:** CORE (claude `sonnet`, effort high); LEAD approves the model ADR. **Independent check:** the eval set
+**Seat:** CORE (models: `swarm-lead/references/model-routing.md`); LEAD approves the model ADR. **Independent check:** the eval set
 is written by QA (OpenCode, role 11) and scored by a judge model from a different family than the generator.
-**Hand-off:** `docs/ai-design.md`, `apps/api/app/prompts/*.md`, schemas in `app/schemas/`,
+**Hand-off:** `docs/ai-design.md`, `apps/api/app/features/<name>/prompts/*.md`, schemas in `app/features/<name>/schemas.py`,
 `apps/api/evals/results/baseline.json`. **Done when:** `node .orca-team/tools/gates.mjs baseline` passes.
 
 Read `references/llm-client.md` (adapter, mock/replay, prompts as files, untrusted input, budgets) before
@@ -38,7 +38,7 @@ on the **dev** split (`npm run eval:dev`); keep a change only if dev improves an
 - **Budgets:** `max_tokens` per call, context cap, per-request time budget, per-user rate limit (role 4).
 
 ## 3. Prompts are versioned files
-`app/prompts/<name>.v<N>.md` with a front block: purpose, variables, output schema name, changelog line.
+`app/features/<feature>/prompts/<name>.v<N>.md` with a front block: purpose, variables, output schema name, changelog line.
 Bump the version for any change; the trace (role 15) and eval history record the version used.
 
 ## 4. `docs/ai-design.md` template (gate checks the headings)

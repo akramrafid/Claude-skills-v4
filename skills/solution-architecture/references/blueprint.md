@@ -27,10 +27,26 @@ contract tests still run Schemathesis against its OpenAPI.
 when the `VERCEL` environment variable is set. Ingestion into production stores runs from a laptop CLI
 (`npm run ingest -- --target prod`) after human approval — never inside a request.
 
-## 3. Repository layout and ownership (seat → paths it may edit)
+## 3. Architecture style and repository layout (seat → paths it may edit)
+**Style (ADR-0001, fixed unless TASK.md forbids it):** modular monolith, one deployable API + one web app.
+Inside, code is cut into **vertical slices** — one folder per MUST capability (`ask`, `ingest`, `report`…)
+holding its contract, router, service, prompts and tests. Outside services (LLM, embeddings, vector store,
+DB) sit behind **ports** (Python `Protocol`s) with real and fake **adapters**. The Clean Architecture rule
+is kept where it pays: `service.py` imports only ports, schemas and `shared/` — never FastAPI, SDKs or ORM.
+Why: one worker can own one slice end to end with no file collisions, a slice can be cut without touching
+the others, and fakes make every slice testable offline.
+
+Slice rules (code review checks these):
+1. A feature never imports another feature. Logic used by 2+ slices moves to `app/shared/` (CORE).
+2. `router.py` is thin: parse → call service → map errors. No business logic, no SDK calls.
+3. `service.py` gets its dependencies through `deps.py` (FastAPI `Depends`) as ports, so tests swap fakes.
+4. `schemas.py` is the contract. Only LEAD edits it; a change is re-exported and broadcast.
+5. LEAD mounts each feature's router in `main.py`. Feature folders never edit `main.py`.
+
 ```
 package.json, .env.example, contracts/openapi.json       LEAD
-docs/PRD.md · docs/architecture.md · docs/adr/ · docs/system-design.md   LEAD (roles 1, 3, 4)
+docs/PRD.md · docs/architecture.md · docs/adr/            LEAD (roles 1, 3)
+docs/system-design.md                                     DESIGN (role 4)
 docs/ux/                                                  UI   (role 2)
 docs/ai-design.md · docs/llmops.md                        CORE (roles 5, 15)
 docs/data-pipeline.md · docs/data-model.md                DATA (roles 6, 7)
@@ -39,23 +55,30 @@ docs/threat-model.md                                      REVIEWER-SEC (role 13)
 apps/api/
   pyproject.toml, uv.lock, .python-version   LEAD  ([tool.vercel] entrypoint = "app.main:app")
   app/__main__.py        LEAD  runner: python -m app [--env test] [--port N] [--no-reload]
-  app/main.py            LEAD  create_app() and module-level `app` (Vercel loads it)
+  app/main.py            LEAD  create_app(); mounts every features/<name>/router; module-level `app`
   app/export_openapi.py · app/healthcheck.py   LEAD
-  app/core/              LEAD  config, logging, errors, middleware, security, rate limits
-  app/schemas/           LEAD  request/response models = the API contract
-  app/api/routes/        CORE  thin routers
-  app/services/          CORE  business logic (no framework imports)
-  app/adapters/          CORE  llm.py, embeddings.py, vectorstore.py, external/
-  app/adapters/db/       DATA  SQLAlchemy models, repositories
+  app/core/              LEAD  config, logging, errors, middleware, security, rate limits, db_url
+  app/ports/             LEAD  llm.py, embeddings.py, vector_store.py, repositories.py (Protocols only)
+  app/features/<name>/   one folder per capability:
+    schemas.py           LEAD  request/response models = the API contract for this slice
+    router.py · service.py · deps.py · prompts/    CORE worker core-<name> (roles 5, 9)
+  app/shared/            CORE  logic used by 2+ slices (retrieval.py, citations.py…) — one owner at a time
+  app/adapters/          CORE  llm.py (LLMClient: timeouts, retries, fallback, traces), fake_llm.py, embeddings.py,
+                               vectorstore.py (pgvector | Qdrant), in-memory store for tests — each implements a port
+  app/adapters/db/       DATA  SQLAlchemy models, repositories implementing ports/repositories.py
   app/observability/     CORE  trace records, sinks, pricing, metrics (role 15)
-  app/prompts/           CORE  versioned prompt files (role 5)
   app/ingest/            DATA  load → parse → chunk → embed → upsert + CLI (role 6)
   migrations/ · scripts/seed.py · scripts/db_check.py    DATA (role 7)
-  tests/unit/            CORE  · tests/integration/ QA · tests/fixtures/ QA (test corpus, fake LLM replies)
+  tests/features/<name>/ slice owner  · tests/integration/ QA · tests/fixtures/ QA (test corpus, fake LLM replies)
   evals/                 QA    run.py, datasets/, rubrics/, results/, history.jsonl, config.json (role 11)
   evals/retrieval.py · evals/datasets/retrieval.jsonl     DATA (role 6)
   evals/redteam.py · evals/redteam/                       REVIEWER-SEC (role 13)
-apps/web/                UI    Next.js app incl. apps/web/e2e/ (role 10)
+apps/web/                UI    Next.js (role 10):
+  src/app/               thin routes/pages that compose features (layout.tsx: LEAD)
+  src/features/<name>/   components, hooks, api.ts — worker ui-<name>
+  src/components/ui/     shadcn primitives (first UI worker; others ask LEAD)
+  src/lib/api/           generated schema.d.ts + typed client
+  e2e/<name>.spec.ts     slice owner
 scripts/smoke.mjs        QA    golden-path smoke for local or deployed URLs
 tests/load/              QA    k6 scripts (role 12)
 .github/workflows/ci.yml LEAD  optional: runs `npm run ci`
@@ -65,7 +88,8 @@ Ports: LEAD api 8000 · core workers 8001, 8002 · ui web 3001 (+ api 8003) · P
 `with-server.mjs` picks a free port by itself.
 
 ## 4. Contract-first, code-first export
-1. LEAD writes Pydantic models in `app/schemas/` and stub routes returning schema-valid mock data. Every
+1. LEAD writes Pydantic models in `app/features/<name>/schemas.py`, the port Protocols in `app/ports/`, and a
+   stub `router.py` per feature returning schema-valid mock data. Every
    route declares its error responses (`responses={422: ..., 429: ..., 502: ...}` with the problem+json
    model) so contract tests can check status codes.
 2. `npm run contracts` → `contracts/openapi.json` (commit). Schema change → re-export → commit → broadcast.

@@ -5,7 +5,8 @@ description: Role 13 (Prove hat) - AI security engineer and red-teamer. Writes d
 
 # AI Red Team — Role 13 · Prove hat
 
-**Seat:** REVIEWER-SEC (agy `Gemini 4 Argon`) — a different family from the Claude-built backend.
+**Seat:** REVIEWER-SEC (models: `swarm-lead/references/model-routing.md`) — a different family from both the Claude-built backend and the
+Gemini-built frontend. Never Kimi K3.1 Pro (its cyber training data was removed).
 **Independent check:** the attack suite is code with deterministic detectors; results are reproducible.
 **Hand-off:** `docs/threat-model.md`, `apps/api/evals/redteam/attacks.jsonl`, `apps/api/evals/redteam.py`,
 `evals/results/redteam.json`, findings in `.orca-team/reviews/r<N>-security.md` (skill `security-review`).

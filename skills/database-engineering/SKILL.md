@@ -5,7 +5,7 @@ description: Role 7 (Design hat) - database engineer. Designs the relational sch
 
 # Database Engineering — Role 7 · Design hat
 
-**Seat:** DATA (opencode). **Independent check:** REVIEWER-CODE (Claude) with
+**Seat:** DATA (models: `swarm-lead/references/model-routing.md`). **Independent check:** REVIEWER-CODE (Claude) with
 `supabase-postgres-best-practices`. **Hand-off:** `apps/api/migrations/`, `apps/api/app/adapters/db/`,
 `apps/api/scripts/seed.py`, `apps/api/scripts/db_check.py`, `docs/data-model.md`.
 **Done when:** `node .orca-team/tools/gates.mjs migrations` (runs `npm run db:check`) passes.

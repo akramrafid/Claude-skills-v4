@@ -79,9 +79,9 @@ function walk(relDir, exts, out = []) {
 function family(model) {
   const m = String(model ?? "").toLowerCase();
   if (!m.trim()) return "";
-  const map = [["anthropic", /claude|opus|sonnet|haiku|fable|mythos|\bbest\b|ag_opus|ag_sonnet/], ["google", /gemini|hydrogen|argon|g_pro|g_flash|gemma/],
+  const map = [["anthropic", /claude|opus|sonnet|haiku|fable|mythos|\bbest\b|ag_opus|ag_sonnet/], ["google", /gemini|neon|hydrogen|argon|carbon|g_pro|g_flash|gemma/],
     ["openai", /gpt|\bo[134]\b|o[134]-|openai/], ["zhipu", /glm/], ["moonshot", /kimi/], ["qwen", /qwen/], ["deepseek", /deepseek/],
-    ["minimax", /minimax/], ["xai", /grok/], ["meta", /llama/], ["mistral", /mistral|codestral/], ["opencode", /opencode/]];
+    ["minimax", /minimax/], ["xai", /grok/], ["meta", /llama|muse|wonder/], ["mistral", /mistral|codestral/], ["opencode", /opencode/]];
   for (const [f, re] of map) if (re.test(m)) return f;
   return m.split(/[\/\s:]/)[0];
 }
@@ -206,6 +206,38 @@ function gateContracts() {
   return res(fails.length ? "FAIL" : warns.length ? "WARN" : "PASS", fails, warns);
 }
 
+// ADR-0001: vertical slices — a feature never imports another feature; services stay framework-free
+function gateSlices() {
+  const fails = [], warns = [];
+  const API = "apps/api/app/features", WEB = "apps/web/src/features";
+  const apiFeats = fs.existsSync(path.join(ROOT, API)) ? fs.readdirSync(path.join(ROOT, API), { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith("_")).map((d) => d.name) : [];
+  const webFeats = fs.existsSync(path.join(ROOT, WEB)) ? fs.readdirSync(path.join(ROOT, WEB), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) : [];
+  if (!apiFeats.length) warns.push(`no ${API}/<name>/ folders — ADR-0001 expects one vertical slice per MUST capability`);
+  const lineOf = (src, i) => src.slice(0, i).split("\n").length;
+  const FRAMEWORK = /^\s*(?:from|import)\s+(fastapi|starlette|sqlalchemy|openai|anthropic|qdrant_client|httpx|asyncpg|psycopg|requests)\b/gm;
+  for (const feat of apiFeats) {
+    for (const f of walk(`${API}/${feat}`, [".py"])) {
+      const src = read(f) ?? "";
+      for (const m of src.matchAll(/^\s*(?:from|import)\s+app\.features\.(\w+)/gm))
+        if (m[1] !== feat) fails.push(`${f}:${lineOf(src, m.index)} imports feature "${m[1]}" — move shared logic to app/shared/`);
+      for (const m of src.matchAll(/^\s*from\s+\.\.(\w+)/gm))
+        if (apiFeats.includes(m[1]) && m[1] !== feat) fails.push(`${f}:${lineOf(src, m.index)} imports feature "${m[1]}" (relative)`);
+      if (/[\\/]service\.py$/.test(f)) for (const m of src.matchAll(FRAMEWORK))
+        fails.push(`${f}:${lineOf(src, m.index)} service imports ${m[1]} — depend on app.ports, put SDK/ORM code in app/adapters/`);
+      if (/[\\/]router\.py$/.test(f) && /^\s*(?:from|import)\s+(openai|anthropic|qdrant_client|sqlalchemy)\b/m.test(src))
+        fails.push(`${f}: router talks to an SDK/ORM directly — go through the service`);
+    }
+  }
+  for (const feat of webFeats) {
+    for (const f of walk(`${WEB}/${feat}`, [".ts", ".tsx"])) {
+      const src = read(f) ?? "";
+      for (const m of src.matchAll(/from\s+["'](?:@\/features\/|(?:\.\.\/)+features\/|\.\.\/)([\w-]+)/g))
+        if (webFeats.includes(m[1]) && m[1] !== feat) fails.push(`${f}:${lineOf(src, m.index)} imports web feature "${m[1]}" — move it to components/ or lib/`);
+    }
+  }
+  return res(fails.length ? "FAIL" : warns.length ? "WARN" : "PASS", fails, warns, `${apiFeats.length} api slices · ${webFeats.length} web slices`);
+}
+
 function gateResilience() {
   const fails = [], warns = [];
   const sd = read("docs/system-design.md");
@@ -248,7 +280,7 @@ function gateBaseline() {
     if (!("metrics" in b) && !("pass_rate" in b)) fails.push("baseline.json has no metrics");
     if (b.commit && !gitOk(["merge-base", "--is-ancestor", b.commit, "HEAD"])) fails.push(`baseline commit ${b.commit} is not an ancestor of HEAD`);
   }
-  if (!walk("apps/api/app/prompts", [".md"]).length) warns.push("no prompt files in apps/api/app/prompts");
+  if (!walk("apps/api/app", [".md"]).some((f) => /[\\/]prompts[\\/]/.test(f))) warns.push("no prompt files in apps/api/app/features/*/prompts/");
   return res(fails.length ? "FAIL" : warns.length ? "WARN" : "PASS", fails, warns);
 }
 
@@ -424,6 +456,7 @@ const GATES = [
   { id: "ux", hat: "frame", roles: "2", name: "UX designer (hallway test)", skill: "ux-flow-design", seat: "UI", run: gateUx },
   { id: "adr", hat: "design", roles: "3", name: "Solution architect (C4 + ADRs)", skill: "solution-architecture", seat: "LEAD", run: gateAdr },
   { id: "contracts", hat: "design", roles: "3", name: "Contracts locked (API, DB, eval set)", skill: "solution-architecture", seat: "LEAD", run: gateContracts },
+  { id: "slices", hat: "build", roles: "3,8", name: "Vertical-slice boundaries (ADR-0001)", skill: "solution-architecture", seat: "LEAD", run: gateSlices },
   { id: "resilience", hat: "design", roles: "4", name: "System designer (register + timeouts)", skill: "system-design", seat: "LEAD", run: gateResilience },
   { id: "baseline", hat: "design", roles: "5", name: "AI engineer (baseline before tuning)", skill: "ai-engineering", seat: "CORE", run: gateBaseline },
   { id: "retrieval", hat: "design", roles: "6", name: "Data engineer (Recall@k)", skill: "data-engineering", seat: "DATA", run: gateRetrieval },
@@ -485,6 +518,14 @@ function merge(branch) {
     spawnSync("git", ["merge", "--abort"], { cwd: ROOT, stdio: "ignore" });
     console.log(`FAIL: merge conflicts (aborted). Files:\n${conflicts}\nResolve toward the contract: git merge --no-ff ${branch}, fix, npm run ci, commit.`);
     return 1;
+  }
+  if (!CFG.skip.slices) {
+    const sl = gateSlices();
+    if (sl.status === "FAIL") {
+      spawnSync("git", ["merge", "--abort"], { cwd: ROOT, stdio: "inherit" });
+      console.log(`FAIL: slice boundaries broken with ${branch} merged — merge aborted:\n  - ${sl.detail.join("\n  - ")}`);
+      return 1;
+    }
   }
   const r = runCmd(CFG.commands.ci, "ci");
   if (r.code !== 0) {
