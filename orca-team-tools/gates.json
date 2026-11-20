@@ -1,0 +1,29 @@
+{
+  "_comment": "Thresholds and commands for node .orca-team/tools/gates.mjs. LEAD may tune thresholds from the PRD NFRs. To mark a gate not applicable, add it to skip with a reason (e.g. \"retrieval\": \"no retrieval in this product\") and log the decision in STATUS.md.",
+  "thresholds": {
+    "recall_at_k": 0.8,
+    "retrieval_min_queries": 20,
+    "eval_threshold": 0.8,
+    "eval_min_heldout": 30,
+    "eval_max_regression": 0.05,
+    "redteam_min_pass": 0.95,
+    "redteam_min_attacks": 25,
+    "dry_run_min": 80,
+    "max_must": 5
+  },
+  "commands": {
+    "ci": "npm run ci",
+    "migrations": "npm run db:check",
+    "contract": "npm run test:contract",
+    "e2e": "npm run e2e",
+    "eval": "npm run eval",
+    "retrieval": "npm run eval:retrieval",
+    "load": "npm run load",
+    "redteam": "npm run redteam",
+    "traces": "npm run check:traces",
+    "bootstrap": "npm run bootstrap"
+  },
+  "timeouts_min": { "default": 15, "e2e": 20, "eval": 30, "redteam": 30, "fresh-clone": 40 },
+  "gitleaks_required": true,
+  "skip": {}
+}
